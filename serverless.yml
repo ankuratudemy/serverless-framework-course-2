@@ -1,0 +1,47 @@
+service: project-tgg-2
+useDotenv: true
+frameworkVersion: '3'
+
+ 
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${opt:stage,'dev'}
+  region: us-west-2
+  memorySize: 512
+  timeout: 10
+  environment:
+    TEST_VAR: TEST_VAR_VALUE-${self:provider.stage}
+    DB_USERNAME_PS: ${ssm:/db_username_ps}
+    DB_PASSWORD_PS: ${ssm:/db_password_ps}
+    DB_USERNAME_SM: ${self:custom.DB_ADMIN_SM.username}
+    DB_PASSWORD_SM: ${self:custom.DB_ADMIN_SM.password}
+    DB_USERNAME_FILE: ${file(./config/config.${opt:stage, 'dev'}.json):username}
+    DB_PASSWORD_FILE: ${file(./config/config.${opt:stage, 'dev'}.json):password}
+    SLS_VARIABLE: ${sls:instanceId}
+    AWS_VARIABLE: ${aws:accountId}
+    S3_VARIABLE: ${s3:slsvariables/variable1.txt}
+    CF_SERVICE_ENDPOINT: ${cf:project-tgg-sample-dev.ServiceEndpoint}
+    STR_TO_BOOL: ${ssm:/ENABLE_DEBUG}
+
+    
+plugins:
+  - serverless-offline
+  - serverless-dotenv-plugin
+custom:
+  DB_ADMIN_SM: ${ssm:/aws/reference/secretsmanager/db_admin_sm}
+
+functions:
+  user:
+    handler: functions/user/user.post
+    description: "Creates a new user"
+    environment:
+      TEST_VAR_FS: "TEST_VAR_FS"
+      ENV_VAR_USING_PLUGIN: ${env:VAR_FROM_ENV_FILE}-${self:provider.name}
+    events:
+      - http:
+          path: user
+          method: post
+          cors: true
+      
+  
